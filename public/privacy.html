@@ -7,45 +7,124 @@
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://finiteverse.online/privacy.html" />
   <style>
-    body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #222; }
-    h1 { font-size: 1.6rem; } h2 { font-size: 1.15rem; margin-top: 2em; }
-    footer { margin-top: 3em; font-size: 0.85rem; color: #666; }
+    :root {
+      --bg-primary: #fff0f5;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #fce7f3;
+      --border-subtle: #fbcfe8;
+      --text-main: #831843;
+      --text-muted: #be185d;
+      --accent-main: #ec4899;
+      --accent-hover: #db2777;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      display: flex;
+      justify-content: center;
+      padding: 48px 20px;
+    }
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(190, 24, 93, 0.08);
+      max-width: 680px;
+      width: 100%;
+      padding: 40px 44px;
+    }
+    .badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin: 0 0 6px;
+      color: var(--text-main);
+    }
+    .updated {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin: 0 0 28px;
+    }
+    p { color: var(--text-main); }
+    h2 {
+      font-size: 1.05rem;
+      margin: 2em 0 0.6em;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 6px;
+    }
+    ul { padding-left: 1.2em; margin: 0.6em 0; }
+    li { margin-bottom: 6px; }
+    a {
+      color: var(--accent-main);
+      text-decoration: underline;
+      text-decoration-color: var(--border-subtle);
+    }
+    a:hover { color: var(--accent-hover); }
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    .back:hover { color: var(--accent-main); }
   </style>
 </head>
 <body>
-  <h1>Privacy Policy</h1>
-  <p>Last updated: August 2026</p>
+  <div class="card">
+    <div class="badge">🐼</div>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: August 2026</p>
 
-  <p>FiniteVerse ("we", "the app") is a finite automata visualizer. This page explains what information we collect when you use it and how it's handled.</p>
+    <p>FiniteVerse ("we", "the app") is a finite automata visualizer. This page explains what information we collect when you use it and how it's handled.</p>
 
-  <h2>What we collect</h2>
-  <p>When you sign in with Google, we receive the following from your Google account, via Firebase Authentication:</p>
-  <ul>
-    <li>Your name</li>
-    <li>Your email address</li>
-    <li>A unique account identifier (UID)</li>
-  </ul>
-  <p>This information is stored in our Firestore database, linked to your account, along with the timestamp of your last sign-in.</p>
+    <h2>What we collect</h2>
+    <p>When you sign in with Google, we receive the following from your Google account, via Firebase Authentication:</p>
+    <ul>
+      <li>Your name</li>
+      <li>Your email address</li>
+      <li>A unique account identifier (UID)</li>
+    </ul>
+    <p>This information is stored in our Firestore database, linked to your account, along with the timestamp of your last sign-in.</p>
 
-  <h2>Why we collect it</h2>
-  <p>Solely to authenticate you and identify your saved data (such as automata you build or save) within the app. We do not use this information for advertising, analytics profiling, or marketing.</p>
+    <h2>Why we collect it</h2>
+    <p>Solely to authenticate you within the app. We do not currently offer a feature to save your automata between sessions — work you build exists only in your browser for that session.</p>
 
-  <h2>What we don't do</h2>
-  <ul>
-    <li>We do not sell or share your data with third parties.</li>
-    <li>We do not use your data for ads or targeted marketing.</li>
-    <li>We do not access your Google account beyond basic profile info (name, email, photo) needed for sign-in.</li>
-  </ul>
+    <h2>What we don't do</h2>
+    <ul>
+      <li>We do not sell or share your data with third parties.</li>
+      <li>We do not use your data for ads or targeted marketing.</li>
+      <li>We do not access your Google account beyond basic profile info (name, email, photo) needed for sign-in.</li>
+    </ul>
 
-  <h2>Data storage</h2>
-  <p>Your data is stored on Google Firebase (Firestore), secured so that only your own signed-in account can read or write your own data.</p>
+    <h2>Data storage</h2>
+    <p>Your data is stored on Google Firebase (Firestore), secured so that only your own signed-in account can read or write your own data.</p>
 
-  <h2>Your rights</h2>
-  <p>You can request deletion of your account data at any time by contacting us at the email below.</p>
+    <h2>Your rights</h2>
+    <p>You can request deletion of your account data at any time by contacting us at the email below.</p>
 
-  <h2>Contact</h2>
-  <p>Questions about this policy: <a href="mailto:salmanbagwan6002@gmail.com">YOUR-EMAIL@example.com</a></p>
+    <h2>Contact</h2>
+    <p>Questions about this policy: <a href="mailto:YOUR-EMAIL@example.com">salmanbagwan6002@gmail.com</a></p>
 
-  <footer><a href="/">← Back to FiniteVerse</a></footer>
+    <a class="back" href="/">← Back to FiniteVerse</a>
+  </div>
 </body>
 </html>

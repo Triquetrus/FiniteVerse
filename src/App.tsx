@@ -222,25 +222,25 @@ export default function App() {
           </div>
           <h1 className="text-2xl font-bold mb-2">Welcome to FiniteVerse</h1>
           <p className="text-text-muted mb-8">Please sign in to access the automata simulator workspace.</p>
-          <button
+         <button
             onClick={handleLogin}
             className="w-full py-3 bg-accent-main text-white hover:bg-accent-hover rounded-md font-medium transition-colors flex items-center justify-center gap-2"
           >
             Sign In with Google
           </button>
+
           <p className="text-xs text-text-muted mt-4">
-            By signing in you agree to our{' '}
+            By signing in you agree to our 
             
-              href="/privacy.html"
+              <a href="/privacy.html"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-main hover:text-accent-hover underline"
-            
-              Privacy Policy
-            <a>
-            . We only use your Google profile to identify your saved work.
-           </a>
+            >
+              _Privacy Policy
+            </a>
           </p>
+
           {authError && (
             <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-sm flex items-start gap-3">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -248,7 +248,7 @@ export default function App() {
             </div>
           )}
         </div>
-      //</div>
+      </div>
     );
   }
 
