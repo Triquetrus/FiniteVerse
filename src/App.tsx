@@ -235,10 +235,11 @@ export default function App() {
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-main hover:text-accent-hover underline"
-            >
+            
               Privacy Policy
-            </a>
+            <a>
             . We only use your Google profile to identify your saved work.
+           </a>
           </p>
           {authError && (
             <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-sm flex items-start gap-3">
@@ -247,7 +248,7 @@ export default function App() {
             </div>
           )}
         </div>
-      </div>
+      //</div>
     );
   }
 
