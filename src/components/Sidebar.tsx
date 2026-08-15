@@ -80,9 +80,9 @@ export function Sidebar({
 
   const isRegexSource = transformation === 'REGEX_TO_ENFA' || transformation === 'REGEX_TO_DFA';
   const isGrammarSource = transformation === 'RG_TO_FA' || transformation === 'CFG_TO_PDA';
-  const isLangSource = transformation === 'LANG_INTERSECTION';
+  const isLangSource = transformation === 'LANG_INTERSECTION' || transformation === 'LANG_TO_FA';
   const isPumpingLemma = transformation === 'PUMPING_LEMMA';
-  const isAutomatonSource = ((!isRegexSource && !isGrammarSource && !isLangSource && !isPumpingLemma) || transformation === 'FA_EQUIVALENCE');
+  const isAutomatonSource = !isRegexSource && !isGrammarSource && !isLangSource && !isPumpingLemma;
   const showRegexInput = isRegexSource || transformation === 'FA_EQUIVALENCE';
 
   return (

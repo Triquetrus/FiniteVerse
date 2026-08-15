@@ -653,9 +653,9 @@ export function minimizeDfa(dfa: Automata): ConversionStep[] {
   });
 
   // Step 2: Initial Partitions
-  let P = [];
-  if (reachableAccept.length > 0) P.push(new Set(reachableAccept));
-  if (reachableNonAccept.length > 0) P.push(new Set(reachableNonAccept));
+  const P: Set<string>[] = [];
+  if (reachableAccept.length > 0) P.push(new Set<string>(reachableAccept));
+  if (reachableNonAccept.length > 0) P.push(new Set<string>(reachableNonAccept));
   
   steps.push({
     type: 'process_state',
@@ -850,4 +850,3 @@ export function simulatePumpingLemma(dfa: Automata): ConversionStep[] {
 
   return steps;
 }
-
