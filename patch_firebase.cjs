@@ -1,69 +1,31 @@
 const fs = require('fs');
+
 let code = fs.readFileSync('src/lib/firebase.ts', 'utf8');
 
-// Replace browserLocalPersistence imports with browserLocalPersistence, browserSessionPersistence, inMemoryPersistence
-code = code.replace(
-  'browserLocalPersistence,',
-  'browserLocalPersistence,\n  browserSessionPersistence,\n  inMemoryPersistence,'
-);
-
-// Replace the persistence logic
-const oldPersistence = `setPersistence(auth, browserLocalPersistence).catch((err) => {
-  console.error("Failed to set auth persistence:", err);
-});`;
-
-const newPersistence = `setPersistence(auth, browserLocalPersistence).catch((err) => {
-  console.warn("Failed to set auth persistence, falling back to session:", err);
-  setPersistence(auth, browserSessionPersistence).catch((err2) => {
-    console.warn("Session persistence failed, falling back to in-memory:", err2);
-    setPersistence(auth, inMemoryPersistence).catch((err3) => {
-      console.error("All persistence setups failed:", err3);
-    });
-  });
-});`;
-
-code = code.replace(oldPersistence, newPersistence);
-
-// Replace signInWithGoogle logic to only use signInWithPopup
-const oldSignIn = `export const signInWithGoogle = async () => {
-  if (isEmbeddedInIframe()) {
-    await signInWithRedirect(auth, provider);
-    return null;
-  }
-  try {
-    const result = await signInWithPopup(auth, provider);
-    if (result.user) await saveUserToFirestore(result.user);
-    return result.user;
-  } catch (error: any) {
-    const code = error?.code || "";
-    const message = error?.message || "";
-    const shouldFallbackToRedirect =
-      code === "auth/popup-blocked" ||
-      code === "auth/popup-closed-by-user" ||
-      code === "auth/cancelled-popup-request" ||
-      message.includes("Cross-Origin-Opener-Policy") ||
-      message.includes("closed");
-
-    if (shouldFallbackToRedirect) {
-      await signInWithRedirect(auth, provider);
-      return null;
-    }
-    console.error("Error signing in with Google:", error);
-    throw error;
-  }
+const oldConfig = `const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };`;
 
-const newSignIn = `export const signInWithGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    if (result.user) await saveUserToFirestore(result.user);
-    return result.user;
-  } catch (error: any) {
-    console.error("Error signing in with Google:", error);
-    throw error;
-  }
-};`;
+const oldAppInit = `const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = import.meta.env.VITE_FIREBASE_DATABASE_ID
+  ? getFirestore(app, import.meta.env.VITE_FIREBASE_DATABASE_ID)
+  : getFirestore(app);`;
 
-code = code.replace(oldSignIn, newSignIn);
+code = code.replace(oldConfig, '');
+code = code.replace('import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";', 'import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";\nimport firebaseConfig from "../../firebase-applet-config.json";');
+
+const newAppInit = `const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = firebaseConfig.firestoreDatabaseId
+  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(app);`;
+
+code = code.replace(oldAppInit, newAppInit);
 
 fs.writeFileSync('src/lib/firebase.ts', code);
