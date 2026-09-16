@@ -84,7 +84,7 @@ export function Sidebar({
   const isPumpingLemma = transformation === 'PUMPING_LEMMA';
   const isAutomatonSource = !isRegexSource && !isGrammarSource && !isLangSource && !isPumpingLemma;
   const showRegexInput = isRegexSource || transformation === 'FA_EQUIVALENCE';
-
+ 
   return (
     <aside className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-border-subtle bg-bg-tertiary p-4 md:p-6 flex flex-col gap-6 md:gap-8 overflow-y-auto max-h-[45vh] md:max-h-none z-10">
             <section>
@@ -109,11 +109,11 @@ export function Sidebar({
           <option value="REGEX_TO_ENFA">Regular Expression → ε-NFA</option>
           <option value="REGEX_TO_DFA">Regular Expression → DFA</option>
           <option value="RG_TO_FA">Regular Grammar → Finite Automaton</option>
-          <option value="FA_TO_RG">Finite Automaton → Regular Grammar</option>
-          <option value="CFG_TO_PDA">CFG → PDA</option>
-          <option value="PDA_TO_CFG">PDA → CFG</option>
-          <option value="PDA_TO_TM">PDA → TM</option>
-          <option value="TM_TO_PDA">TM → PDA</option>
+          
+          
+          
+          
+          
         </select>
       </section>
       
@@ -179,7 +179,7 @@ export function Sidebar({
                 </select>
               </div>
             )}
-            {transformation === 'LANG_TO_FA' && (
+            {(transformation as string) === 'LANG_TO_FA' && (
               <>
                 <div>
                   <label className="text-xs font-bold uppercase tracking-widest text-text-muted block mb-3">Condition</label>

@@ -7,7 +7,7 @@ import { MainArea } from './components/MainArea';
 import { Automata, Transition, ConversionStep, PumpingLemmaState } from './types';
 import { auth, signInWithGoogle, logout, completeRedirectSignIn } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { convertNfaToDfa, convertRegexToEnfa, convertGrammarToFa, convertAutomataToRegex, convertLangToFa, convertLangIntersection, checkFaEquivalence, minimizeDfa, simulatePumpingLemma } from './lib/automata';
+import { convertNfaToDfa, convertRegexToEnfa, convertGrammarToFa, convertAutomataToRegex, convertLangToFa, convertLangIntersection, checkFaEquivalence, minimizeDfa, simulatePumpingLemma, convertEnfaToNfa, convertDfaToNfa } from './lib/automata';
 
 export default function App() {
   const [theme, setTheme] = useState('theme-gp');
@@ -139,7 +139,7 @@ export default function App() {
         transitions: transitions.filter(t => t.from && t.to && t.symbol !== undefined)
      };
      
-     if (transformation === 'NFA_TO_DFA') {
+     if (transformation === 'NFA_TO_DFA' || transformation === 'ENFA_TO_DFA') {
          const steps = convertNfaToDfa(automata);
          setSimulationSteps(steps);
          setCurrentStepIndex(0);
@@ -148,8 +148,21 @@ export default function App() {
          setSimulationSteps(steps);
          setCurrentStepIndex(0);
      } else if (transformation === 'REGEX_TO_ENFA' || transformation === 'REGEX_TO_DFA') {
-         const steps = convertRegexToEnfa(regexInput);
-         setSimulationSteps(steps);
+         const enfaSteps = convertRegexToEnfa(regexInput);
+         if (transformation === 'REGEX_TO_DFA') {
+             const lastStep = enfaSteps[enfaSteps.length - 1];
+             const nfa = {
+                 states: lastStep.dfaStates.map(s => s[0]),
+                 alphabet: Array.from(new Set(lastStep.dfaTransitions.map(t => t.symbol).filter(s => s !== 'ε' && s !== 'e' && s !== ''))),
+                 transitions: lastStep.dfaTransitions.map((t, idx) => ({id: 't' + idx, from: t.from[0], symbol: t.symbol, to: t.to[0]})),
+                 startState: lastStep.dfaStartState[0],
+                 acceptStates: lastStep.dfaAcceptStates.map(s => s[0])
+             };
+             const dfaSteps = convertNfaToDfa(nfa);
+             setSimulationSteps([...enfaSteps, ...dfaSteps]);
+         } else {
+             setSimulationSteps(enfaSteps);
+         }
          setCurrentStepIndex(0);
      } else if (transformation === 'RG_TO_FA' || transformation === 'FA_TO_RG' || transformation === 'CFG_TO_PDA' || transformation === 'PDA_TO_CFG') {
          const steps = convertGrammarToFa(grammarInput);
@@ -166,6 +179,14 @@ export default function App() {
          setCurrentStepIndex(0);
      } else if (transformation === 'FA_EQUIVALENCE') {
          const steps = checkFaEquivalence(automata, regexInput);
+         setSimulationSteps(steps);
+         setCurrentStepIndex(0);
+     } else if (transformation === 'ENFA_TO_NFA') {
+         const steps = convertEnfaToNfa(automata);
+         setSimulationSteps(steps);
+         setCurrentStepIndex(0);
+     } else if (transformation === 'DFA_TO_NFA') {
+         const steps = convertDfaToNfa(automata);
          setSimulationSteps(steps);
          setCurrentStepIndex(0);
      } else {
