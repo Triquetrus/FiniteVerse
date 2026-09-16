@@ -1,12 +1,12 @@
 {
-  "projectId": "valiant-oasis-zn50x",
-  "appId": "1:1004098652961:web:f0f04644ecd7b6bc3b8c60",
-  "apiKey": "AIzaSyAsvgWGOZAx4JazsxL2NMO8ayvzACCUJ_U",
-  "authDomain": "valiant-oasis-zn50x.firebaseapp.com",
+  "projectId": "finiteverse",
+  "appId": "1:1000174084149:web:d2886c34bb4420c303117c",
+  "apiKey": "AIzaSyCG25DJmctf44EmJgJgPMSZ_MRLzrD-LnM",
+  "authDomain": "finiteverse.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-finiteverse-382fd63f-185f-436b-853e-be9abe18583d",
-  "storageBucket": "valiant-oasis-zn50x.firebasestorage.app",
-  "messagingSenderId": "1004098652961",
-  "measurementId": "",
-  "oAuthClientId": "1004098652961-mdigh1h8t4c1lgarfj88dn3tgg9s4nob.apps.googleusercontent.com",
+  "storageBucket": "finiteverse.firebasestorage.app",
+  "messagingSenderId": "1000174084149",
+  "measurementId": "G-K4YXCYWGRQ",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }
