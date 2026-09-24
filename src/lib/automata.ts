@@ -225,34 +225,90 @@ export function convertNfaToDfa(nfa: Automata): ConversionStep[] {
   const dfaStates: string[][] = [];
   const dfaTransitions: { from: string[]; symbol: string; to: string[] }[] = [];
   
-  const alphabet = nfa.alphabet.filter(a => a !== '' && a !== 'e' && a !== 'ε');
+  // Determine Alphabet: extract from nfa.alphabet and any transitions
+  let alphabet = nfa.alphabet.map(a => a.trim()).filter(a => a !== '' && a !== 'e' && a !== 'ε');
+  for (const t of nfa.transitions) {
+    const sym = (t.symbol || '').trim();
+    if (sym && sym !== 'e' && sym !== 'ε' && !alphabet.includes(sym)) {
+      alphabet.push(sym);
+    }
+  }
+  if (alphabet.length === 0) {
+    alphabet = ['0', '1'];
+  } else if (alphabet.length === 1) {
+    if (alphabet[0] === '0' || alphabet[0] === '1') {
+      alphabet = ['0', '1'];
+    } else if (alphabet[0] === 'a' || alphabet[0] === 'b') {
+      alphabet = ['a', 'b'];
+    }
+  } else if (alphabet.includes('0') || alphabet.includes('1')) {
+    if (!alphabet.includes('0')) alphabet.unshift('0');
+    if (!alphabet.includes('1')) alphabet.push('1');
+    alphabet = Array.from(new Set(alphabet)).sort();
+  } else if (alphabet.includes('a') || alphabet.includes('b')) {
+    if (!alphabet.includes('a')) alphabet.unshift('a');
+    if (!alphabet.includes('b')) alphabet.push('b');
+    alphabet = Array.from(new Set(alphabet)).sort();
+  }
+  alphabet.sort();
   
-  const startClosure = getEpsilonClosure([nfa.startState], nfa.transitions);
+  const startNode = nfa.startState || nfa.states[0] || 'q0';
+  const startClosure = getEpsilonClosure([startNode], nfa.transitions);
   if (startClosure.length === 0) return steps; // Invalid NFA
-  
+
+  const deadState = ['dead'];
+  let deadStateAdded = false;
+
+  const stateKey = (s: string[]) => s.slice().sort().join(',');
+
+  const getAcceptStates = (statesList: string[][]) =>
+    statesList.filter(s => s.some(st => nfa.acceptStates.includes(st)));
+
   dfaStates.push(startClosure);
-  const unmarked = [startClosure];
+  const unmarked: string[][] = [startClosure];
   
   steps.push({
     type: 'init',
-    message: `Start by finding the ε-closure of the start state {${nfa.startState}}. This is our new DFA start state: {${startClosure.join(', ')}}`,
+    message: `Start by finding the ε-closure of start state {${startNode}}. DFA start state: {${startClosure.join(', ')}}. Alphabet Σ = {${alphabet.join(', ')}}.`,
     dfaStates: [...dfaStates],
     dfaTransitions: [...dfaTransitions],
     highlightDfaState: startClosure,
+    dfaStartState: startClosure,
+    dfaAcceptStates: getAcceptStates(dfaStates)
   });
   
   while (unmarked.length > 0) {
     const T = unmarked.shift()!;
+    const isDead = T.length === 1 && T[0] === 'dead';
     
     steps.push({
       type: 'process_state',
-      message: `Take an unmarked DFA state: {${T.join(', ')}}. We will compute transitions for each symbol.`,
+      message: isDead
+        ? `Processing dead state {dead}. Adding self-loops on all symbols Σ = {${alphabet.join(', ')}}...`
+        : `Take unmarked DFA state: {${T.join(', ')}}. Computing transitions for each symbol in Σ = {${alphabet.join(', ')}}...`,
       dfaStates: [...dfaStates],
       dfaTransitions: [...dfaTransitions],
       highlightDfaState: T,
+      dfaStartState: startClosure,
+      dfaAcceptStates: getAcceptStates(dfaStates)
     });
     
     for (const a of alphabet) {
+      if (isDead) {
+        dfaTransitions.push({ from: T, symbol: a, to: T });
+        steps.push({
+          type: 'add_transition',
+          message: `On input '${a}', dead state {dead} remains in {dead}.`,
+          dfaStates: [...dfaStates],
+          dfaTransitions: [...dfaTransitions],
+          highlightDfaState: T,
+          currentSymbol: a,
+          dfaStartState: startClosure,
+          dfaAcceptStates: getAcceptStates(dfaStates)
+        });
+        continue;
+      }
+
       const reachable = new Set<string>();
       for (const state of T) {
         const trans = nfa.transitions.filter(t => t.from === state && t.symbol === a);
@@ -260,10 +316,9 @@ export function convertNfaToDfa(nfa: Automata): ConversionStep[] {
       }
       
       const U = getEpsilonClosure(Array.from(reachable), nfa.transitions);
-      if (U.length === 0) U.push('∅');
       
       if (U.length > 0) {
-        let existing = dfaStates.find(s => s.join(',') === U.join(','));
+        let existing = dfaStates.find(s => stateKey(s) === stateKey(U));
         if (!existing) {
           dfaStates.push(U);
           unmarked.push(U);
@@ -276,30 +331,395 @@ export function convertNfaToDfa(nfa: Automata): ConversionStep[] {
             dfaStates: [...dfaStates],
             dfaTransitions: [...dfaTransitions],
             highlightDfaState: existing,
-            currentSymbol: a
+            currentSymbol: a,
+            dfaStartState: startClosure,
+            dfaAcceptStates: getAcceptStates(dfaStates)
           });
         } else {
           dfaTransitions.push({ from: T, symbol: a, to: existing });
           steps.push({
             type: 'add_transition',
-            message: `On input '${a}', {${T.join(', ')}} transitions to ε-closure {${existing.join(', ')}}. This state already exists.`,
+            message: `On input '${a}', {${T.join(', ')}} transitions to ε-closure {${existing.join(', ')}}. (State already exists)`,
             dfaStates: [...dfaStates],
             dfaTransitions: [...dfaTransitions],
             highlightDfaState: existing,
-            currentSymbol: a
+            currentSymbol: a,
+            dfaStartState: startClosure,
+            dfaAcceptStates: getAcceptStates(dfaStates)
           });
         }
+      } else {
+        // No reachable state in NFA on symbol 'a' -> dead/trap state
+        if (!deadStateAdded) {
+          deadStateAdded = true;
+          dfaStates.push(deadState);
+          unmarked.push(deadState);
+        }
+        dfaTransitions.push({ from: T, symbol: a, to: deadState });
+        steps.push({
+          type: 'add_transition',
+          message: `On input '${a}', {${T.join(', ')}} has no transition in NFA. Added transition to dead state {dead}.`,
+          dfaStates: [...dfaStates],
+          dfaTransitions: [...dfaTransitions],
+          highlightDfaState: deadState,
+          currentSymbol: a,
+          dfaStartState: startClosure,
+          dfaAcceptStates: getAcceptStates(dfaStates)
+        });
       }
     }
   }
   
   steps.push({
     type: 'done',
-    message: `All DFA states marked. Conversion complete!`,
+    message: `All DFA states marked and all transitions complete. Every state has transitions for all symbols Σ = {${alphabet.join(', ')}}!`,
     dfaStates: [...dfaStates],
     dfaTransitions: [...dfaTransitions],
+    dfaStartState: startClosure,
+    dfaAcceptStates: getAcceptStates(dfaStates)
   });
   
+  return steps;
+}
+
+export function convertRegexToDfa(rawRegex: string): ConversionStep[] {
+  const steps: ConversionStep[] = [];
+  const regex = (rawRegex || '').trim() || '(0|1)*011';
+
+  // 1. Determine Alphabet
+  const nonSymbolChars = new Set(['(', ')', '*', '|', '+', ' ', '\t', '\n', '\r', 'ε', 'e']);
+  const foundSymbols = new Set<string>();
+  for (const ch of regex) {
+    if (!nonSymbolChars.has(ch)) {
+      foundSymbols.add(ch);
+    }
+  }
+
+  let alphabet = Array.from(foundSymbols).sort();
+  if (alphabet.length === 0) {
+    alphabet = ['0', '1'];
+  } else if (alphabet.length === 1) {
+    if (alphabet[0] === '0' || alphabet[0] === '1') {
+      alphabet = ['0', '1'];
+    } else if (alphabet[0] === 'a' || alphabet[0] === 'b') {
+      alphabet = ['a', 'b'];
+    }
+  } else if (alphabet.includes('0') || alphabet.includes('1')) {
+    if (!alphabet.includes('0')) alphabet.unshift('0');
+    if (!alphabet.includes('1')) alphabet.push('1');
+    alphabet = Array.from(new Set(alphabet)).sort();
+  } else if (alphabet.includes('a') || alphabet.includes('b')) {
+    if (!alphabet.includes('a')) alphabet.unshift('a');
+    if (!alphabet.includes('b')) alphabet.push('b');
+    alphabet = Array.from(new Set(alphabet)).sort();
+  }
+  alphabet.sort();
+
+  // Normalize regex: replace binary '+' with '|' (union)
+  let normalized = '';
+  for (let i = 0; i < regex.length; i++) {
+    const ch = regex[i];
+    if (ch === '+') {
+      normalized += '|';
+    } else {
+      normalized += ch;
+    }
+  }
+
+  // 2. Tokenize and insert explicit concatenation '.'
+  const tokens: string[] = [];
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i];
+    if (ch === ' ' || ch === '\t') continue;
+    tokens.push(ch);
+  }
+
+  const isOperand = (t: string) => t !== '(' && t !== ')' && t !== '*' && t !== '|' && t !== '.';
+  const tokensWithConcat: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const curr = tokens[i];
+    if (i > 0) {
+      const prev = tokens[i - 1];
+      if ((isOperand(prev) || prev === ')' || prev === '*') && (isOperand(curr) || curr === '(')) {
+        tokensWithConcat.push('.');
+      }
+    }
+    tokensWithConcat.push(curr);
+  }
+
+  // 3. Shunting-Yard: infix to postfix
+  const postfix: string[] = [];
+  const opStack: string[] = [];
+  const prec = (op: string) => (op === '*' ? 3 : op === '.' ? 2 : op === '|' ? 1 : 0);
+
+  for (const t of tokensWithConcat) {
+    if (isOperand(t)) {
+      postfix.push(t);
+    } else if (t === '(') {
+      opStack.push(t);
+    } else if (t === ')') {
+      while (opStack.length > 0 && opStack[opStack.length - 1] !== '(') {
+        postfix.push(opStack.pop()!);
+      }
+      if (opStack.length > 0 && opStack[opStack.length - 1] === '(') {
+        opStack.pop();
+      }
+    } else {
+      // Operator: *, ., |
+      while (opStack.length > 0) {
+        const top = opStack[opStack.length - 1];
+        if (top === '(') break;
+        if (prec(top) >= prec(t)) {
+          postfix.push(opStack.pop()!);
+        } else {
+          break;
+        }
+      }
+      opStack.push(t);
+    }
+  }
+  while (opStack.length > 0) {
+    const op = opStack.pop()!;
+    if (op !== '(' && op !== ')') postfix.push(op);
+  }
+
+  // 4. Thompson's Construction to build NFA
+  type Frag = {
+    start: string;
+    accept: string;
+    transitions: Transition[];
+  };
+
+  let stateCounter = 0;
+  const newId = () => `n${stateCounter++}`;
+  const fragStack: Frag[] = [];
+
+  for (const t of postfix) {
+    if (isOperand(t)) {
+      const s0 = newId();
+      const s1 = newId();
+      fragStack.push({
+        start: s0,
+        accept: s1,
+        transitions: [{ id: `tr_${s0}_${s1}`, from: s0, symbol: t === 'ε' || t === 'e' ? 'ε' : t, to: s1 }]
+      });
+    } else if (t === '.') {
+      if (fragStack.length >= 2) {
+        const f2 = fragStack.pop()!;
+        const f1 = fragStack.pop()!;
+        const epsTrans: Transition = {
+          id: `tr_${f1.accept}_${f2.start}`,
+          from: f1.accept,
+          symbol: 'ε',
+          to: f2.start
+        };
+        fragStack.push({
+          start: f1.start,
+          accept: f2.accept,
+          transitions: [...f1.transitions, ...f2.transitions, epsTrans]
+        });
+      }
+    } else if (t === '|') {
+      if (fragStack.length >= 2) {
+        const f2 = fragStack.pop()!;
+        const f1 = fragStack.pop()!;
+        const sStart = newId();
+        const sAccept = newId();
+        const eps: Transition[] = [
+          { id: `tr_${sStart}_${f1.start}`, from: sStart, symbol: 'ε', to: f1.start },
+          { id: `tr_${sStart}_${f2.start}`, from: sStart, symbol: 'ε', to: f2.start },
+          { id: `tr_${f1.accept}_${sAccept}`, from: f1.accept, symbol: 'ε', to: sAccept },
+          { id: `tr_${f2.accept}_${sAccept}`, from: f2.accept, symbol: 'ε', to: sAccept }
+        ];
+        fragStack.push({
+          start: sStart,
+          accept: sAccept,
+          transitions: [...f1.transitions, ...f2.transitions, ...eps]
+        });
+      }
+    } else if (t === '*') {
+      if (fragStack.length >= 1) {
+        const f = fragStack.pop()!;
+        const sStart = newId();
+        const sAccept = newId();
+        const eps: Transition[] = [
+          { id: `tr_${sStart}_${f.start}`, from: sStart, symbol: 'ε', to: f.start },
+          { id: `tr_${sStart}_${sAccept}`, from: sStart, symbol: 'ε', to: sAccept },
+          { id: `tr_${f.accept}_${f.start}`, from: f.accept, symbol: 'ε', to: f.start },
+          { id: `tr_${f.accept}_${sAccept}`, from: f.accept, symbol: 'ε', to: sAccept }
+        ];
+        fragStack.push({
+          start: sStart,
+          accept: sAccept,
+          transitions: [...f.transitions, ...eps]
+        });
+      }
+    }
+  }
+
+  if (fragStack.length === 0) {
+    const s0 = newId();
+    const s1 = newId();
+    fragStack.push({
+      start: s0,
+      accept: s1,
+      transitions: [{ id: `tr_${s0}_${s1}`, from: s0, symbol: alphabet[0], to: s1 }]
+    });
+  }
+
+  const finalFrag = fragStack[0];
+  const nfaTransitions = finalFrag.transitions;
+  const nfaStart = finalFrag.start;
+  const nfaAccept = finalFrag.accept;
+
+  // 5. Subset Construction with total transition function (every state has all symbols in alphabet)
+  const subsetKey = (arr: string[]) => arr.slice().sort().join(',');
+
+  const startClosure = getEpsilonClosure([nfaStart], nfaTransitions);
+  const nameMap = new Map<string, string>();
+  let dfaCounter = 0;
+  const getDfaName = (key: string) => {
+    if (key === 'DEAD') return 'dead';
+    if (!nameMap.has(key)) {
+      nameMap.set(key, `q${dfaCounter++}`);
+    }
+    return nameMap.get(key)!;
+  };
+
+  const startName = getDfaName(subsetKey(startClosure));
+  const dfaStates: string[][] = [[startName]];
+  const dfaTransitions: { from: string[]; symbol: string; to: string[] }[] = [];
+  const unmarked: { name: string; subset: string[] }[] = [{ name: startName, subset: startClosure }];
+  let deadStateAdded = false;
+
+  const getAcceptStates = () => {
+    const accepts: string[][] = [];
+    for (const [key, name] of nameMap.entries()) {
+      if (name === 'dead') continue;
+      const states = key.split(',');
+      if (states.includes(nfaAccept)) {
+        accepts.push([name]);
+      }
+    }
+    return accepts;
+  };
+
+  steps.push({
+    type: 'init',
+    message: `Parsed Regular Expression "${regex}". Alphabet Σ = {${alphabet.join(', ')}}. Start state {${startName}} represents ε-closure {${startClosure.join(', ')}}.`,
+    dfaStates: [[startName]],
+    dfaTransitions: [],
+    highlightDfaState: [startName],
+    dfaStartState: [startName],
+    dfaAcceptStates: getAcceptStates()
+  });
+
+  while (unmarked.length > 0) {
+    const curr = unmarked.shift()!;
+    const { name: currName, subset: currSubset } = curr;
+
+    steps.push({
+      type: 'process_state',
+      message: currName === 'dead'
+        ? `Processing dead state {dead}. Adding self-loops on all alphabet symbols Σ = {${alphabet.join(', ')}}...`
+        : `Processing DFA state {${currName}} (subset {${currSubset.join(', ')}}). Computing transitions for all symbols Σ = {${alphabet.join(', ')}}...`,
+      dfaStates: [...dfaStates],
+      dfaTransitions: [...dfaTransitions],
+      highlightDfaState: [currName],
+      dfaStartState: [startName],
+      dfaAcceptStates: getAcceptStates()
+    });
+
+    for (const a of alphabet) {
+      if (currName === 'dead') {
+        dfaTransitions.push({ from: [currName], symbol: a, to: [currName] });
+        steps.push({
+          type: 'add_transition',
+          message: `On input '${a}', dead state {dead} remains in {dead}.`,
+          dfaStates: [...dfaStates],
+          dfaTransitions: [...dfaTransitions],
+          highlightDfaState: [currName],
+          currentSymbol: a,
+          dfaStartState: [startName],
+          dfaAcceptStates: getAcceptStates()
+        });
+        continue;
+      }
+
+      const reachable = new Set<string>();
+      for (const st of currSubset) {
+        for (const tr of nfaTransitions) {
+          if (tr.from === st && tr.symbol === a) {
+            reachable.add(tr.to);
+          }
+        }
+      }
+
+      const U = getEpsilonClosure(Array.from(reachable), nfaTransitions);
+
+      if (U.length > 0) {
+        const uKey = subsetKey(U);
+        const isNew = !nameMap.has(uKey);
+        const nextName = getDfaName(uKey);
+
+        if (isNew) {
+          dfaStates.push([nextName]);
+          unmarked.push({ name: nextName, subset: U });
+          dfaTransitions.push({ from: [currName], symbol: a, to: [nextName] });
+          steps.push({
+            type: 'add_transition',
+            message: `On input '${a}', {${currName}} transitions to new DFA state {${nextName}} representing ε-closure {${U.join(', ')}}.`,
+            dfaStates: [...dfaStates],
+            dfaTransitions: [...dfaTransitions],
+            highlightDfaState: [nextName],
+            currentSymbol: a,
+            dfaStartState: [startName],
+            dfaAcceptStates: getAcceptStates()
+          });
+        } else {
+          dfaTransitions.push({ from: [currName], symbol: a, to: [nextName] });
+          steps.push({
+            type: 'add_transition',
+            message: `On input '${a}', {${currName}} transitions to existing DFA state {${nextName}}.`,
+            dfaStates: [...dfaStates],
+            dfaTransitions: [...dfaTransitions],
+            highlightDfaState: [nextName],
+            currentSymbol: a,
+            dfaStartState: [startName],
+            dfaAcceptStates: getAcceptStates()
+          });
+        }
+      } else {
+        // No reachable state on symbol 'a' -> dead state
+        if (!deadStateAdded) {
+          deadStateAdded = true;
+          dfaStates.push(['dead']);
+          unmarked.push({ name: 'dead', subset: [] });
+        }
+        dfaTransitions.push({ from: [currName], symbol: a, to: ['dead'] });
+        steps.push({
+          type: 'add_transition',
+          message: `On input '${a}', {${currName}} has no next state. Added transition to dead state {dead}.`,
+          dfaStates: [...dfaStates],
+          dfaTransitions: [...dfaTransitions],
+          highlightDfaState: ['dead'],
+          currentSymbol: a,
+          dfaStartState: [startName],
+          dfaAcceptStates: getAcceptStates()
+        });
+      }
+    }
+  }
+
+  steps.push({
+    type: 'done',
+    message: `Regular Expression to DFA conversion complete! All ${dfaStates.length} states have transitions for all symbols Σ = {${alphabet.join(', ')}}.`,
+    dfaStates: [...dfaStates],
+    dfaTransitions: [...dfaTransitions],
+    dfaStartState: [startName],
+    dfaAcceptStates: getAcceptStates()
+  });
+
   return steps;
 }
 
@@ -668,7 +1088,7 @@ if (reachableNonAccept.length > 0) P.push(new Set<string>(reachableNonAccept));
   });
 
   // Step 3: Refine Partitions
-  let W = [...P];
+  let W: Set<string>[] = [...P];
   while (W.length > 0) {
     const A = W.shift()!;
     for (const c of dfa.alphabet) {
@@ -851,6 +1271,7 @@ export function simulatePumpingLemma(dfa: Automata): ConversionStep[] {
 
   return steps;
 }
+
 
 export function convertEnfaToNfa(nfa: Automata): ConversionStep[] {
   const steps: ConversionStep[] = [];

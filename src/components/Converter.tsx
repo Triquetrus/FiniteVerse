@@ -58,10 +58,15 @@ export function Converter({ nfa, onReset }: Props) {
   const dfaNodes = currentStep?.dfaStates.map(stateSet => {
     const id = stateSet.join(',');
     const label = `{${id}}`;
-    // A DFA state is accept if it contains any NFA accept state
-    const isAccept = stateSet.some(s => nfa.acceptStates.includes(s));
-    // It's start if it's the first state in the array
-    const isStart = currentStep.dfaStates[0].join(',') === id;
+    let isAccept = false;
+    if (currentStep.dfaAcceptStates) {
+      isAccept = currentStep.dfaAcceptStates.some(s => s.join(',') === id);
+    } else {
+      isAccept = stateSet.some(s => nfa.acceptStates.includes(s));
+    }
+    const isStart = currentStep.dfaStartState
+      ? currentStep.dfaStartState.join(',') === id
+      : currentStep.dfaStates[0]?.join(',') === id;
     
     return { id, label, isAccept, isStart };
   }) || [];

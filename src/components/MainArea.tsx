@@ -120,18 +120,37 @@ export function MainArea({
   const renderTransitionTable = (isMobile: boolean = false) => {
     // get unique symbols processed so far (or all alphabet)
     let alphabet: string[] = [];
-    if (isTextSource && currentStep) {
+    if (isTextSource) {
       const stepAlphabet = new Set<string>();
-      currentStep.dfaTransitions.forEach(t => {
-        if (t.symbol !== '' && t.symbol !== 'e' && t.symbol !== 'ε') {
-          stepAlphabet.add(t.symbol);
-        }
+      simulationSteps.forEach(st => {
+        st.dfaTransitions.forEach(t => {
+          if (t.symbol !== '' && t.symbol !== 'e' && t.symbol !== 'ε') {
+            stepAlphabet.add(t.symbol);
+          }
+        });
       });
       alphabet = Array.from(stepAlphabet).sort();
     }
     
     if (alphabet.length === 0) {
-      alphabet = automata.alphabet.filter(a => a !== '' && a !== 'e' && a !== 'ε');
+      const alphaSet = new Set<string>();
+      automata.alphabet.forEach(a => {
+        const s = a.trim();
+        if (s && s !== 'e' && s !== 'ε') alphaSet.add(s);
+      });
+      automata.transitions.forEach(t => {
+        const s = (t.symbol || '').trim();
+        if (s && s !== 'e' && s !== 'ε') alphaSet.add(s);
+      });
+      alphabet = Array.from(alphaSet).sort();
+    }
+
+    if (alphabet.length === 0) {
+      alphabet = ['0', '1'];
+    } else if (alphabet.length === 1 && (alphabet[0] === '0' || alphabet[0] === '1')) {
+      alphabet = ['0', '1'];
+    } else if (alphabet.length === 1 && (alphabet[0] === 'a' || alphabet[0] === 'b')) {
+      alphabet = ['a', 'b'];
     }
 
     return (
